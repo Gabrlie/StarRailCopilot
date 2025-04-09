@@ -1,18 +1,22 @@
 FROM python:3.10.10-slim
 
+
+
 WORKDIR /app
 
-COPY . /app
+#COPY . /app
 
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list && \
-    apt update && apt install -y --no-install-recommends python3-dev git adb python3-opencv && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt update && apt install -y --no-install-recommends python3-dev git adb python3-opencv gcc ffmpeg libsm6 libxext6 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    git clone https://github.com/Gabrlie/StarRailCopilot . && \
+    pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
+    pip install --upgrade pip setuptools && \
+    pip install --no-cache-dir -r requirements.txt
 
-# 使用环境变量 TZ 设置时区
-ARG TZ=UTC
+ARG TZ=Shanghai
 ENV TZ=${TZ}
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 
 # 创建启动脚本
 RUN echo '#!/bin/bash\n\
@@ -26,17 +30,9 @@ if [ -n "$PASSWORD" ]; then\n\
   sed -i "s/Password: null/Password: $PASSWORD/g" config/deploy.yaml\n\
 fi\n\
 \n\
-if [ ! -f "/app/.dependencies_installed" ]; then\n\
-  echo "Installing dependencies..."\n\
-  pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple\n\
-  pip install --upgrade pip setuptools\n\
-  pip install --no-cache-dir -r requirements.txt\n\
-  touch /app/.dependencies_installed\n\
-else\n\
-  echo "Dependencies already installed."\n\
-fi\n\
-\n\
 python gui.py\n\
 ' > /app/start.sh && chmod +x /app/start.sh
+
+LABEL version="1.1"
 
 CMD ["/app/start.sh"]
